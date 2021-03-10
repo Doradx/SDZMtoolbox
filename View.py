@@ -125,13 +125,13 @@ class View(QGraphicsView):
             return False
         return self.imageItem.pixmap().toImage()
 
-    def getRenderedImageFromScene(self):
+    def getRenderedImageFromScene(self, cropped=True):
         originImage = self.getImage()
         area = QRect(QPoint(0, 0), QPoint(originImage.width(), originImage.height()))
         image = QImage(area.size(), QImage.Format_ARGB32_Premultiplied)
         image.fill(Qt.transparent)
         painter = QPainter(image)
-        if self.cropPolygon:
+        if self.cropPolygon and cropped:
             path = QPainterPath()
             path.addPolygon(self.cropPolygon)
             painter.setClipPath(path)
@@ -200,10 +200,15 @@ class PolygonView(View):
         View.setImage(self, image)
         if len(self.cropPolygon) > 2:
             self.setCropPolygon(self.cropPolygon)
+        else:
+            self.setCropPolygon()
 
     # PROPERTY
     def getCropPolygon(self):
-        return self.cropPolygon
+        if len(self.cropPolygon):
+            return self.cropPolygon
+        image = self.getImage()
+        return QPolygonF(image.rect())
 
     def getROIsPolygon(self):
         ROIsPolygon = []
@@ -271,15 +276,18 @@ class PolygonView(View):
         self.setCursor(Qt.ArrowCursor)
         self.__tmpPolygonRender()
 
-    def setCropPolygon(self, cropPolygon):
-        self.cropPolygon = cropPolygon
+    def setCropPolygon(self, cropPolygon=None):
+        if not cropPolygon or not len(cropPolygon):
+            self.cropPolygon = QPolygonF(QRectF(self.getImage().rect()))
+        else:
+            self.cropPolygon = cropPolygon
         if not self.imageItem:
             return
         originImage = self.imageItem.pixmap()
         newImage = QPixmap(originImage.size())
         newImage.fill(Qt.transparent)
         path = QPainterPath()
-        path.addPolygon(cropPolygon)
+        path.addPolygon(self.cropPolygon)
         painter = QPainter(newImage)
         painter.setClipPath(path)
         painter.drawPixmap(QPointF(), originImage)

@@ -40,11 +40,11 @@ class LabelDataTable(QWidget):
         self.toolbar = QToolBar()
 
         # cancel section action
-        self.showAllAction = QAction(QIcon('./images/icons/show.png'), 'Show all regions')
+        self.showAllAction = QAction(QIcon('./res/icons/show.png'), 'Show all regions')
         self.showAllAction.triggered.connect(self.showAllRegion)
 
         # save action
-        self.saveAction = QAction(QIcon('./images/icons/CSV.png'), 'Export table as csv')
+        self.saveAction = QAction(QIcon('./res/icons/CSV.png'), 'Export table as csv')
         self.saveAction.triggered.connect(self.saveAsCsv)
 
         self.toolbar.addAction(self.showAllAction)
@@ -54,19 +54,19 @@ class LabelDataTable(QWidget):
 
         # add a status of total information, area, perimeter
         shearPerimeterHBox = QHBoxLayout()
-        shearPerimeterLabel = QLabel('Shear Perimeter: ')
+        shearPerimeterLabel = QLabel('Perimeter: ')
         shearPerimeterValue = QLineEdit()
         shearPerimeterValue.setText('0')
-        shearPerimeterValue.setDisabled(True)
+        # shearPerimeterValue.setDisabled(True)
         shearPerimeterHBox.addWidget(shearPerimeterLabel)
         shearPerimeterHBox.addWidget(shearPerimeterValue)
         self.shearPerimeterValue = shearPerimeterValue
 
         shearAreaHBox = QHBoxLayout()
-        shearAreaLabel = QLabel('Shear Area: ')
+        shearAreaLabel = QLabel('Area: ')
         shearAreaValue = QLineEdit()
         shearAreaValue.setText('0')
-        shearAreaValue.setDisabled(True)
+        # shearAreaValue.setDisabled(True)
         # shearAreaHBox.addWidget(shearAreaLabel)
         # shearAreaHBox.addWidget(shearAreaValue)
         shearPerimeterHBox.addWidget(shearAreaLabel)
@@ -74,10 +74,10 @@ class LabelDataTable(QWidget):
         self.shearAreaValue = shearAreaValue
 
         totalShearFailureRegionAreaHBox = QHBoxLayout()
-        totalShearFailureRegionAreaLabel = QLabel('Shear Failure Region Area (total):')
+        totalShearFailureRegionAreaLabel = QLabel('Total Area of Shear Failure Damage Zone:')
         totalShearFailureRegionAreaValue = QLineEdit()
         totalShearFailureRegionAreaValue.setText('0')
-        totalShearFailureRegionAreaValue.setDisabled(True)
+        # totalShearFailureRegionAreaValue.setDisabled(True)
         totalShearFailureRegionAreaHBox.addWidget(totalShearFailureRegionAreaLabel)
         totalShearFailureRegionAreaHBox.addWidget(totalShearFailureRegionAreaValue)
         # totalShearFailureRegionAreaHBox.addSpacerItem(QSpacerItem(20, 5, QSizePolicy.Expanding, QSizePolicy.Minimum))
@@ -99,8 +99,8 @@ class LabelDataTable(QWidget):
         # selectionModel = self.table.selectionModel()
         self.table.selectionModel().selectionChanged.connect(self.itemClickedAction)
 
-        self.setWindowTitle('Shear Failure Region Detection Result')
-        self.setWindowIcon(QIcon('./images/icons/table-white.png'))
+        self.setWindowTitle('Detail Information of Shear Damage Zones')
+        self.setWindowIcon(QIcon('./res/icons/table-white.png'))
         self.table.verticalHeader().setVisible(True)
 
         self.mainLayout = QVBoxLayout()

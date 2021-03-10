@@ -82,9 +82,9 @@ class MainWindow(QMainWindow):
         self.actionGroupChannel.addAction(self.actionChannelBlue)
 
         self.actionSetScale = QAction(QIcon('res/icons/ruler.png'), 'Set Scale', self)
-        self.actionCropImage = QAction(QIcon('res/icons/crop.png'), 'Load Image', self)
-        self.actionCreateNewROI = QAction(QIcon('res/icons/polygon.png'), 'Load Image', self)
-        self.actionDeleteSelectedROIs = QAction(QIcon('res/icons/delete-rois.png'), 'Load Image', self)
+        self.actionCropImage = QAction(QIcon('res/icons/crop.png'), 'Crop Image', self)
+        self.actionCreateNewROI = QAction(QIcon('res/icons/polygon.png'), 'Create New ROI', self)
+        self.actionDeleteSelectedROIs = QAction(QIcon('res/icons/delete-rois.png'), 'Delete Selected ROIs', self)
         # analysis
         self.actionAnalysisOtsuBasedOnROIs = QAction(QIcon('res/icons/run.png'),
                                                      'Analysis - OTSU Threshold Method Based on ROIs',
@@ -275,6 +275,7 @@ class MainWindow(QMainWindow):
         self.originImage = None
 
         self.colorChannel = 'RGB'
+        self.__setColorChannelByName(self.colorChannel)
 
         self.originView.clear()
         self.labelView.clear()
@@ -328,7 +329,6 @@ class MainWindow(QMainWindow):
     def __saveProject(self):
         if not self.projectFileName:
             self.__saveProjectAs()
-
         ROIs = []
         for roi in self.originView.getROIsPolygon():
             ROIs.append(QPolygonF2list(roi))
@@ -376,6 +376,8 @@ class MainWindow(QMainWindow):
             else:
                 act.setChecked(False)
         # change the image in origin view
+        if not self.originImage:
+            return
         self.originView.setImage(QImageToGrayByChannel(self.originImage, self.colorChannel))
 
     # pretreatment
@@ -387,40 +389,92 @@ class MainWindow(QMainWindow):
 
     # analysis
     def __analysisOtsuBasedOnROIs(self):
-
-        pass
+        self.AT = ROIsOTSUAnalysisThread()
+        self.__analysisRun()
 
     def __analysisROIs(self) -> None:
         '''
         generate the labelImage based on the ROIs
         :return:
         '''
-        pass
+        self.AT = ROIsToZonesAnalysisThread()
+        self.__analysisRun()
 
     def __analysisOTSU(self):
-        grayImage = QImage2GrayNArray(self.originView.getImage())
-        self.labelView.setCropPolygon(self.originView.cropPolygon)
-        AT = AnalysisThread()
-        AT.setParamters(grayImage, self.originView.cropPolygon)
-        AT.process.connect(self.__updateProcessBarValue)
-        AT.finish.connect(self.labelView.setImage)
-        AT.run()
+        self.AT = AnalysisThread()
+        self.__analysisRun()
 
     def __analysisRiss(self):
+        self.AT = RissAnalysisThread()
+        self.__analysisRun()
 
-        pass
+    def __analysisRun(self):
+        if not hasattr(self, 'AT'):
+            return
+        grayImage = QImage2GrayNArray(self.originView.getImage())
+        self.labelView.setCropPolygon(self.originView.getCropPolygon())
+        self.AT.setParameters(grayImage, self.originView.getCropPolygon(), self.originView.getROIsPolygon())
+        self.processBar.setVisible(True)
+        progress = QProgressDialog(self)
+        progress.setWindowTitle("Analyzing")
+        progress.setLabelText("Analyzing...")
+        progress.setCancelButtonText("cancel")
+        progress.setMinimumDuration(5)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.show()
+        self.processDialog = progress
+
+        self.AT.process.connect(self.__updateProcessBarValue)
+        self.AT.process.connect(self.processDialog.setValue)
+        self.AT.finish.connect(self.__analysisFinished)
+        self.AT.run()
+
+    def __analysisFinished(self, binaryImage):
+        self.labelView.setImage(binaryImage)
+        self.AT.process.disconnect()
+        self.AT.finish.disconnect()
+        self.processBar.setVisible(False)
+        if hasattr(self, 'processDialog'):
+            self.processDialog.close()
+            delattr(self, 'processDialog')
+        QMessageBox.information(self, 'Finished', 'Analysis is Finished.')
+        delattr(self, 'AT')
 
     # post
     def __exportImageWithROIs(self):
         filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save image with ROIs',
                                                          os.path.join(self.projectWorkPath, 'ImageWithROIs-%s.png' % (
                                                              datetime.datetime.now().strftime('%Y%m%d%H%M%S'))),
-                                                         ' png (*.png);;')
+                                                         ' png (*.png);; eps (*.eps)')
         if not filePath:
             QMessageBox.warning(self, 'No Path Selected', 'No Path is selected.')
             return
-        image = self.originView.getRenderedImageFromScene()
-        image.save(filePath)
+        # check the file type
+        if fileType == 'eps (*.eps)':
+            # eps format
+            # get image and cropPolygon
+            image = QImage2NArray(self.originView.getImage())
+            if len(image.shape) > 2:
+                image = image.transpose((1, 0, 2))
+            else:
+                image = image.transpose((1, 0))
+            from shapely.geometry import Polygon
+            cropPolygon = self.originView.getCropPolygon()
+            ROIs = self.originView.getROIsPolygon()
+            # draw as eps
+            import matplotlib.pyplot as plt
+            plt.imshow(image)
+            for roi in ROIs:
+                roi = QPolygonF2list(roi)
+                plt.plot(*Polygon(roi).exterior.xy, 'r')
+            plt.plot(*Polygon(QPolygonF2list(cropPolygon)).exterior.xy, 'g')
+            plt.axis('equal')
+            plt.axis('off')
+            plt.savefig(filePath, format='eps', transparent=True)
+            pass
+        else:
+            image = self.originView.getRenderedImageFromScene()
+            image.save(filePath)
 
     def __exportImageWithDamageZones(self):
         filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save image with shear damage zones',
