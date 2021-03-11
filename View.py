@@ -177,7 +177,7 @@ class PolygonView(View):
         self.tmpCropPolygonPen = QPen(Qt.green, scale)
         self.tmpCropPolygonPen.setDashOffset(10)
         self.tmpCropPolygonPen.setDashPattern({0.0, 2.0 * dashScale, 1.0 * dashScale, 2.0 * dashScale})
-        self.tmpScaleLinePolygonPen = QPen(Qt.black, scale)
+        self.tmpScaleLinePolygonPen = QPen(Qt.green, scale)
         # self.cropPolygonPen = QPen(Qt.green, 10)
         self.penCropPolygon = QPen(Qt.green, scale)
         self.penROIsPolygon = QPen(Qt.red, scale)

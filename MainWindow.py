@@ -396,7 +396,7 @@ class MainWindow(QMainWindow):
 
     def __imageRegistration(self):
         self.imageRegWidget = ImageRegWidget()
-        self.imageRegWidget.loadDamageImage(QImage2NArray(self.originImage))
+        self.imageRegWidget.loadDamageImage(QImage2NArray(self.originImage).transpose((1, 0, 2)))
         self.imageRegWidget.finish.connect(self.__openImage)
         self.imageRegWidget.show()
         self.__updateActionsStatus()
