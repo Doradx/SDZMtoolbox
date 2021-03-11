@@ -13,6 +13,7 @@ from AnalysisThread import *
 from ImageTool import *
 from LabelImageDataTable import LabelDataTable
 import os, pickle
+from ImageRegistration import ImageRegWidget
 
 
 class MainWindow(QMainWindow):
@@ -40,6 +41,7 @@ class MainWindow(QMainWindow):
 
         # connect originView and labelView
         self.originView.MousePosChanged.connect(self.__updateMosuePositionShownInStatusBar)
+        self.originView.PolygonDrawFinishedSignal.connect(self.__updateActionsStatus)
         self.labelView.MousePosChanged.connect(self.__updateMosuePositionShownInStatusBar)
         self.originView.RealScaleChangedSignal.connect(self.__updateRealScale)
 
@@ -59,9 +61,9 @@ class MainWindow(QMainWindow):
         self.actionCloseProject = QAction(QIcon('res/icons/close.png'), 'Close Project', self)
         self.actionCloseProject.setShortcut(QKeySequence.Close)
         self.actionExit = QAction(QIcon('res/icons/exit.png'), 'Exit', self)
-        # pretreatment
-        self.actionImageRegistration = QAction(QIcon('res/icons/align-center.png'), 'Image Registration', self)
 
+        self.actionImageRegistration = QAction(QIcon('res/icons/align-center.png'), 'Image Registration', self)
+        # pretreatment
         # channel
         self.actionGroupChannel = QActionGroup(self)
         self.actionChannelRGB = QAction(QIcon('res/icons/channel-rgb.png'), 'RGB')
@@ -156,6 +158,7 @@ class MainWindow(QMainWindow):
         menuFile = menuBar.addMenu('File')
         menuFile.addActions([
             self.actionOpenImage,
+            self.actionImageRegistration,
             menuFile.addSeparator(),
             self.actionOpenProject,
             self.actionSaveProject,
@@ -175,7 +178,6 @@ class MainWindow(QMainWindow):
             self.actionChannelBlue
         ])
         menuPretreatment.addActions([
-            self.actionImageRegistration,
             menuPretreatment.addSeparator(),
             self.actionSetScale,
             self.actionCropImage,
@@ -220,15 +222,14 @@ class MainWindow(QMainWindow):
         toolbar = self.addToolBar('total')
         toolbar.addActions([
             self.actionOpenImage,
+            self.actionImageRegistration,
             self.actionOpenProject,
             self.actionSaveProjectAs,
-            self.actionCloseProject,
             toolbar.addSeparator(),
         ])
         toolbar.addActions(self.actionGroupChannel.actions())
         toolbar.addSeparator()
         toolbar.addActions([
-            self.actionImageRegistration,
             self.actionSetScale,
             self.actionCropImage,
             self.actionCreateNewROI,
@@ -236,8 +237,8 @@ class MainWindow(QMainWindow):
             toolbar.addSeparator(),
             self.actionAnalysisOtsuBasedOnROIs,
             toolbar.addSeparator(),
-            self.actionFilterSmallHoles,
             self.actionFilterSmallZones,
+            self.actionFilterSmallHoles,
             self.actionDamageZonesTable,
             self.actionExportImageWithROIs,
             self.actionExportImageWithShearDamageZones,
@@ -279,20 +280,25 @@ class MainWindow(QMainWindow):
 
         self.originView.clear()
         self.labelView.clear()
-        pass
+        self.__updateActionsStatus()
 
     # File
 
-    def __openImage(self):
-        filePath, fileType = QFileDialog.getOpenFileName(self, caption='Choose the image',
-                                                         directory=self.projectWorkPath,
-                                                         filter='Image (*.jpg);;Image (*.png);;Image (*.tif)')
-        if not filePath:
-            QMessageBox.warning(self, 'No File Selected', 'No image file is selected.')
-            return
-        self.initUi()
-        self.projectWorkPath, self.imageFileName = os.path.split(filePath)
-        self.originImage = QImage(filePath)
+    def __openImage(self, image=np.array([])):
+        if type(image) != np.ndarray:
+            filePath, fileType = QFileDialog.getOpenFileName(self, caption='Choose the image',
+                                                             directory=self.projectWorkPath,
+                                                             filter='Image (*.jpg);;Image (*.png);;Image (*.tif)')
+            if not filePath:
+                QMessageBox.warning(self, 'No File Selected', 'No image file is selected.')
+                return
+            image = QImage(filePath)
+            self.initUi()
+            self.projectWorkPath, self.imageFileName = os.path.split(filePath)
+        else:
+            image = NArray2QImage(image)
+            self.initUi()
+        self.originImage = image
         self.originView.setImage(self.originImage)
         self.__updateActionsStatus()
 
@@ -346,6 +352,7 @@ class MainWindow(QMainWindow):
             with open(filePath, mode='wb') as f:
                 pickle.dump(project, f, pickle.HIGHEST_PROTOCOL)
                 QMessageBox.information(self, 'Success', 'Project file has been created successfully.')
+            self.__updateActionsStatus()
         except Exception as e:
             QMessageBox.warning(self, 'Error', 'Failed to write project file. %s' % e)
             return
@@ -360,6 +367,7 @@ class MainWindow(QMainWindow):
             return
         self.projectWorkPath, self.projectFileName = os.path.split(filePath)
         self.__saveProject()
+        self.__updateActionsStatus()
 
     def __closeProject(self):
         reply = QMessageBox.warning(self, 'Close project', 'Close the project all clear all windows?',
@@ -367,6 +375,7 @@ class MainWindow(QMainWindow):
                                     QMessageBox.No)
         if reply == QMessageBox.Yes:
             self.initUi()
+        self.__updateActionsStatus()
 
     def __setColorChannelByName(self, channel='RGB'):
         for act in self.actionGroupChannel.actions():
@@ -379,13 +388,17 @@ class MainWindow(QMainWindow):
         if not self.originImage:
             return
         self.originView.setImage(QImageToGrayByChannel(self.originImage, self.colorChannel))
+        self.__updateActionsStatus()
 
     # pretreatment
     def __channelChanged(self, action):
         self.__setColorChannelByName(action.text())
 
     def __imageRegistration(self):
-        pass
+        self.imageRegWidget = ImageRegWidget()
+        self.imageRegWidget.finish.connect(self.__openImage)
+        self.imageRegWidget.show()
+        self.__updateActionsStatus()
 
     # analysis
     def __analysisOtsuBasedOnROIs(self):
@@ -428,6 +441,7 @@ class MainWindow(QMainWindow):
         self.AT.process.connect(self.processDialog.setValue)
         self.AT.finish.connect(self.__analysisFinished)
         self.AT.run()
+        self.__updateActionsStatus()
 
     def __analysisFinished(self, binaryImage):
         self.labelView.setImage(binaryImage)
@@ -439,6 +453,7 @@ class MainWindow(QMainWindow):
             delattr(self, 'processDialog')
         QMessageBox.information(self, 'Finished', 'Analysis is Finished.')
         delattr(self, 'AT')
+        self.__updateActionsStatus()
 
     # post
     def __exportImageWithROIs(self):
@@ -475,6 +490,7 @@ class MainWindow(QMainWindow):
         else:
             image = self.originView.getRenderedImageFromScene()
             image.save(filePath)
+        self.__updateActionsStatus()
 
     def __exportImageWithDamageZones(self):
         filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save image with shear damage zones',
@@ -486,11 +502,13 @@ class MainWindow(QMainWindow):
             return
         image = self.labelView.getRenderedImageFromScene()
         image.save(filePath)
+        self.__updateActionsStatus()
 
     def __damageZonesTable(self):
         self.resultTable = LabelDataTable()
         self.resultTable.setData(self.labelView.binaryImage, self.originView.realScale, self.originView.cropPolygon)
         self.resultTable.show()
+        self.__updateActionsStatus()
 
     # help
     def __tutorials(self):
@@ -513,6 +531,24 @@ class MainWindow(QMainWindow):
 
     # change the button status according to the parameters
     def __updateActionsStatus(self) -> None:
+        image = self.originView.getImage()
+        hasOriginImage = not (image is None or image is False)
+        self.actionSaveProject.setEnabled(hasOriginImage)
+        self.actionSaveProjectAs.setEnabled(hasOriginImage)
+        self.actionCloseProject.setEnabled(hasOriginImage)
+        self.actionSetScale.setEnabled(hasOriginImage)
+        self.actionCropImage.setEnabled(hasOriginImage)
+        self.actionCreateNewROI.setEnabled(hasOriginImage)
+        self.actionDeleteSelectedROIs.setEnabled(hasOriginImage and len(self.originView.scene.selectedItems()))
+        self.actionAnalysisOtsuBasedOnROIs.setEnabled(hasOriginImage and len(self.originView.getROIsPolygon()))
+        self.actionAnalysisROIs.setEnabled(hasOriginImage and len(self.originView.getROIsPolygon()))
+        self.actionAnalysisOTSU.setEnabled(hasOriginImage)
+        self.actionAnalysisRiss.setEnabled(hasOriginImage and len(self.originView.getROIsPolygon()))
+        self.actionFilterSmallZones.setEnabled(len(self.labelView.binaryImage.shape))
+        self.actionFilterSmallHoles.setEnabled(len(self.labelView.binaryImage.shape))
+        self.actionExportImageWithROIs.setEnabled(hasOriginImage)
+        self.actionExportImageWithShearDamageZones.setEnabled(len(self.labelView.binaryImage.shape))
+        self.actionDamageZonesTable.setEnabled(len(self.labelView.binaryImage.shape))
         pass
 
     def __updateRealScale(self, newScale, oldScale):

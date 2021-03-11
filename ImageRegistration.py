@@ -18,11 +18,17 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from skimage import io, color
 import numpy as np
+from ImageTool import *
 
 
 class ImageRegWidget(QWidget):
+    finish = pyqtSignal([np.ndarray], name='sub image')
+
     def __init__(self):
         QWidget.__init__(self)
+
+        self.setWindowTitle('Image Registration for Rock Joint')
+        self.setWindowIcon(QIcon('res/icons/logo.ico'))
 
         self.leftLayout = QVBoxLayout()
         self.tabWidget = QTabWidget()
@@ -43,8 +49,8 @@ class ImageRegWidget(QWidget):
         self.buttonLoadDamageImage.clicked.connect(self.__loadDamageImage)
         self.selectFeatureBox = QComboBox()
         self.selectFeatureBox.addItems([
-            'SIFT',
             'ORB',
+            'SIFT',
         ])
         self.lineEditMaxFeaturePoints = QLineEdit('500')
         self.lineEditMaxFeaturePoints.setValidator(QIntValidator(20, 5000))
@@ -66,18 +72,30 @@ class ImageRegWidget(QWidget):
         groupBoxExport = QGroupBox('Export')
         self.selectSubType = QComboBox()
         self.selectSubType.addItems([
-            'Pre-Damage',
             'Damage-Pre',
-            'Both'
+            'Pre-Damage',
+            'Both',
         ])
+        self.selectSubType.currentTextChanged.connect(self.__updateSubImage)
+        self.channelType = QComboBox()
+        self.channelType.addItems([
+            'Gray',
+            'Red',
+            'Green',
+            'Blue'
+        ])
+        self.channelType.currentTextChanged.connect(self.__updateSubImage)
         self.buttonLoadImageToSDZM = QPushButton('Load to SDZM toolbox')
+        self.buttonLoadImageToSDZM.clicked.connect(self.__exportToDZMTtoolbox)
         self.buttonExportAsPng = QPushButton('Export as *.png')
+        self.buttonExportAsPng.clicked.connect(self.__exportAsPng)
         exportFormBox = QFormLayout()
         exportFormBox.addRow('Sub Type', self.selectSubType)
+        exportFormBox.addRow('Channel', self.channelType)
         exportVBox = QVBoxLayout()
         exportVBox.addLayout(exportFormBox)
-        exportVBox.addWidget(self.buttonLoadImageToSDZM)
         exportVBox.addWidget(self.buttonExportAsPng)
+        exportVBox.addWidget(self.buttonLoadImageToSDZM)
         groupBoxExport.setLayout(exportVBox)
 
         self.leftLayout.addWidget(groupBoxImageReg)
@@ -98,6 +116,8 @@ class ImageRegWidget(QWidget):
         self.preImage = None
         self.damageImage = None
         self.alignedImage = None
+        self.subImage = None
+        self.__updateActionsStatus()
 
     def __loadPreImage(self):
         filePath, fileType = QFileDialog.getOpenFileName(self, caption='Choose the image',
@@ -109,6 +129,7 @@ class ImageRegWidget(QWidget):
         self.initUi()
         self.projectWorkPath, _ = os.path.split(filePath)
         self.__setPreImage(io.imread(filePath))
+        self.__updateActionsStatus()
 
     def __loadDamageImage(self):
         filePath, fileType = QFileDialog.getOpenFileName(self, caption='Choose the image',
@@ -119,6 +140,7 @@ class ImageRegWidget(QWidget):
             return
         self.projectWorkPath, _ = os.path.split(filePath)
         self.__setDamageImage(io.imread(filePath))
+        self.__updateActionsStatus()
 
     def __analysis(self):
         IT = ImageRegThread()
@@ -126,27 +148,74 @@ class ImageRegWidget(QWidget):
         IT.error.connect(self.__errorHandle)
         IT.finish.connect(self.__analysisFinished)
         IT.run()
+        self.__updateActionsStatus()
 
     def __setPreImage(self, image):
         # plt.close(1)
         self.preImage = image
         self.preImageCanvas.imshow(self.preImage, 'Image of Undamaged Specimen')
         self.tabWidget.setCurrentWidget(self.preImageCanvas)
+        self.__updateActionsStatus()
 
     def __setDamageImage(self, image):
         # plt.close(1)
         self.damageImage = image
         self.damageImageCanvas.imshow(self.damageImage, 'Image of Damaged Specimen')
         self.tabWidget.setCurrentWidget(self.damageImageCanvas)
+        self.__updateActionsStatus()
 
     def __setMatchesImage(self, image):
         self.featureMatchsCanvas.imshow(image, 'Match Result of Features')
         self.tabWidget.setCurrentWidget(self.featureMatchsCanvas)
+        self.__updateActionsStatus()
 
-    def __setAlignedImage(self, image):
-        self.alignedImage = image
-        self.resultCanvas.imshow(self.alignedImage, 'Aligned Image of Damaged Specimen')
+    def __setAlignedImage(self, alignImage):
+        self.alignedImage = alignImage
+        self.resultCanvas.imshow(self.preImage, 'Image of Undamaged Specimen', '221')
+        self.resultCanvas.imshow(self.damageImage, 'Image of Damage Speciimen', '222')
+        self.resultCanvas.imshow(self.alignedImage, 'Aligned Image of Damaged Specimen', '223')
         self.tabWidget.setCurrentWidget(self.resultCanvas)
+        self.__updateActionsStatus()
+
+    def __updateSubImage(self):
+        cType = self.selectSubType.currentText()
+        channel = self.channelType.currentText()
+        if cType not in [
+            'Pre-Damage',
+            'Damage-Pre',
+            'Both'
+        ]:
+            return
+        preImage = NAImage2GrayByChannel(self.preImage, channel)
+        alignedImage = NAImage2GrayByChannel(self.alignedImage, channel)
+        # generate the sub image
+        subImage = preImage.astype(np.float) - alignedImage.astype(np.float)
+        if cType == 'Pre-Damage':
+            subImage[subImage < 0] = 0
+        elif cType == 'Damage-Pre':
+            subImage[subImage > 0] = 0
+        # else:
+        subImage = np.abs(subImage)
+        self.subImage = subImage.astype(np.uint8)
+        self.resultCanvas.imshow(self.subImage, 'Sub Image', '224', 'gray')
+        self.__updateActionsStatus()
+
+    def __exportAsPng(self):
+        # select path
+        filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save the image',
+                                                         os.path.join(self.projectWorkPath, 'ImageOutput-%s.png' % (
+                                                             datetime.datetime.now().strftime('%Y%m%d%H%M%S'))),
+                                                         ' png (*.png);;')
+        if not filePath:
+            QMessageBox.warning(self, 'No Path Selected', 'No Path is selected.')
+            return
+        io.imsave(filePath, self.subImage)
+        self.__updateActionsStatus()
+
+    def __exportToDZMTtoolbox(self):
+        self.finish.emit(self.subImage)
+        self.__updateActionsStatus()
+        self.close()
 
     def __errorHandle(self, error):
         QMessageBox.warning(self, 'Error', error)
@@ -154,10 +223,16 @@ class ImageRegWidget(QWidget):
     def __analysisFinished(self, imageAligned, matchesImage):
         self.__setMatchesImage(matchesImage)
         self.__setAlignedImage(imageAligned)
+        self.__updateSubImage()
+
+    def __updateActionsStatus(self):
+        self.buttonLoadDamageImage.setEnabled(type(self.preImage) == np.ndarray)
+        self.buttonAnalysis.setEnabled(type(self.preImage) == np.ndarray and type(self.damageImage) == np.ndarray)
+        self.buttonLoadImageToSDZM.setEnabled(type(self.subImage) == np.ndarray)
+        self.buttonExportAsPng.setEnabled(type(self.subImage) == np.ndarray)
 
 
 # matplotlib 绘图
-
 class Canvas(FigureCanvas):
     def __init__(self, dpi=200):
         self.fig = Figure(dpi=dpi)
@@ -167,16 +242,20 @@ class Canvas(FigureCanvas):
                                    QSizePolicy.Expanding)
         FigureCanvas.updateGeometry(self)
 
-    def imshow(self, image, title=None, mod='111'):
+        self.fontDict = {
+            'fontsize': 8
+        }
+
+    def imshow(self, image, title='', mod='111', cmap='viridis'):
         axes = self.fig.add_subplot(mod)
-        axes.imshow(image)
-        if not title:
-            axes.set_title(title)
+        axes.imshow(image, cmap)
+        if len(title):
+            axes.set_title(title, self.fontDict)
+        axes.axis('off')
         self.draw()
 
 
 # 图像对齐
-
 class ImageRegThread(QThread):
     finish = pyqtSignal([np.ndarray, np.ndarray], name='analysis finished')
     error = pyqtSignal([int], name='error')

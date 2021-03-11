@@ -22,18 +22,26 @@ def QImageToGrayByChannel(qimage: QImage, channel, isNdarray=False):
     if channel == 'RGB':
         return qimage
     imageArray = QImage2NArray(qimage)
-    if channel == 'Gray':
-        imageArray = np.mean(imageArray, axis=2)
-    elif channel == 'Red':
-        imageArray = imageArray[:, :, 0]
-    elif channel == 'Green':
-        imageArray = imageArray[:, :, 1]
-    else:
-        imageArray = imageArray[:, :, 2]
+    imageArray = NAImage2GrayByChannel(imageArray, channel)
     imageArray = np.squeeze(imageArray)
     if isNdarray:
         return imageArray
     return NArray2QImage(imageArray)
+
+
+def NAImage2GrayByChannel(image, channel='Gray'):
+    channel = channel.upper()
+    if not channel in ['GRAY', 'RED', 'GREEN', 'BLUE']:
+        return False
+    if channel == 'GRAY':
+        imageArray = np.mean(image, axis=2)
+    elif channel == 'RED':
+        imageArray = image[:, :, 0]
+    elif channel == 'GREEN':
+        imageArray = image[:, :, 1]
+    else:
+        imageArray = image[:, :, 2]
+    return np.squeeze(imageArray)
 
 
 def QImage2GrayNArray(qimage: QImage):
