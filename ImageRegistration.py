@@ -44,9 +44,9 @@ class ImageRegWidget(QWidget):
         self.tabWidget.addTab(self.resultCanvas, 'Result')
 
         self.buttonLoadPreImage = QPushButton('Load Pre Image')
-        self.buttonLoadPreImage.clicked.connect(self.__loadPreImage)
+        self.buttonLoadPreImage.clicked.connect(self.loadPreImage)
         self.buttonLoadDamageImage = QPushButton('Load Damage Image')
-        self.buttonLoadDamageImage.clicked.connect(self.__loadDamageImage)
+        self.buttonLoadDamageImage.clicked.connect(self.loadDamageImage)
         self.selectFeatureBox = QComboBox()
         self.selectFeatureBox.addItems([
             'ORB',
@@ -60,8 +60,8 @@ class ImageRegWidget(QWidget):
         groupBoxImageReg = QGroupBox('Image Registration')
         groupBoxImageReg.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
         vBox = QVBoxLayout()
-        vBox.addWidget(self.buttonLoadPreImage)
         vBox.addWidget(self.buttonLoadDamageImage)
+        vBox.addWidget(self.buttonLoadPreImage)
         formBox = QFormLayout()
         formBox.addRow('Feature', self.selectFeatureBox)
         formBox.addRow('MaxFeatures', self.lineEditMaxFeaturePoints)
@@ -119,27 +119,30 @@ class ImageRegWidget(QWidget):
         self.subImage = None
         self.__updateActionsStatus()
 
-    def __loadPreImage(self):
-        filePath, fileType = QFileDialog.getOpenFileName(self, caption='Choose the image',
-                                                         directory=self.projectWorkPath,
-                                                         filter='Image (*.jpg);;Image (*.png);;Image (*.tif)')
-        if not filePath:
-            QMessageBox.warning(self, 'No File Selected', 'No image file is selected.')
-            return
-        self.initUi()
-        self.projectWorkPath, _ = os.path.split(filePath)
-        self.__setPreImage(io.imread(filePath))
+    def loadPreImage(self, image=False):
+        if image is False:
+            filePath, fileType = QFileDialog.getOpenFileName(self, caption='Choose the image',
+                                                             directory=self.projectWorkPath,
+                                                             filter='Image (*.jpg);;Image (*.png);;Image (*.tif)')
+            if not filePath:
+                QMessageBox.warning(self, 'No File Selected', 'No image file is selected.')
+                return
+            self.projectWorkPath, _ = os.path.split(filePath)
+            image = io.imread(filePath)
+        self.__setPreImage(image)
         self.__updateActionsStatus()
 
-    def __loadDamageImage(self):
-        filePath, fileType = QFileDialog.getOpenFileName(self, caption='Choose the image',
-                                                         directory=self.projectWorkPath,
-                                                         filter='Image (*.jpg);;Image (*.png);;Image (*.tif)')
-        if not filePath:
-            QMessageBox.warning(self, 'No File Selected', 'No image file is selected.')
-            return
-        self.projectWorkPath, _ = os.path.split(filePath)
-        self.__setDamageImage(io.imread(filePath))
+    def loadDamageImage(self, image=None):
+        if image is False:
+            filePath, fileType = QFileDialog.getOpenFileName(self, caption='Choose the image',
+                                                             directory=self.projectWorkPath,
+                                                             filter='Image (*.jpg);;Image (*.png);;Image (*.tif)')
+            if not filePath:
+                QMessageBox.warning(self, 'No File Selected', 'No image file is selected.')
+                return
+            self.projectWorkPath, _ = os.path.split(filePath)
+            image = io.imread(filePath)
+        self.__setDamageImage(image)
         self.__updateActionsStatus()
 
     def __analysis(self):
@@ -186,10 +189,10 @@ class ImageRegWidget(QWidget):
             'Both'
         ]:
             return
-        preImage = NAImage2GrayByChannel(self.preImage, channel)
+        damageImage = NAImage2GrayByChannel(self.damageImage, channel)
         alignedImage = NAImage2GrayByChannel(self.alignedImage, channel)
         # generate the sub image
-        subImage = preImage.astype(np.float) - alignedImage.astype(np.float)
+        subImage = alignedImage.astype(np.float) - damageImage.astype(np.float)
         if cType == 'Pre-Damage':
             subImage[subImage < 0] = 0
         elif cType == 'Damage-Pre':
@@ -213,7 +216,7 @@ class ImageRegWidget(QWidget):
         self.__updateActionsStatus()
 
     def __exportToDZMTtoolbox(self):
-        self.finish.emit(self.subImage)
+        self.finish.emit(self.subImage.transpose((1, 0)))
         self.__updateActionsStatus()
         self.close()
 
@@ -226,7 +229,8 @@ class ImageRegWidget(QWidget):
         self.__updateSubImage()
 
     def __updateActionsStatus(self):
-        self.buttonLoadDamageImage.setEnabled(type(self.preImage) == np.ndarray)
+        self.buttonLoadPreImage.setEnabled(type(self.damageImage) == np.ndarray)
+        # self.buttonLoadDamageImage.setEnabled(type(self.preImage) == np.ndarray)
         self.buttonAnalysis.setEnabled(type(self.preImage) == np.ndarray and type(self.damageImage) == np.ndarray)
         self.buttonLoadImageToSDZM.setEnabled(type(self.subImage) == np.ndarray)
         self.buttonExportAsPng.setEnabled(type(self.subImage) == np.ndarray)
@@ -263,7 +267,7 @@ class ImageRegThread(QThread):
     def __init__(self):
         QThread.__init__(self)
 
-    def setParameters(self, imageRef, image, algorithm='ORB', maxFeatures=1000):
+    def setParameters(self, image, imageRef, algorithm='ORB', maxFeatures=1000):
         self.imageRef = imageRef
         self.image = image
         self.algorithm = algorithm

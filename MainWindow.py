@@ -297,7 +297,7 @@ class MainWindow(QMainWindow):
             self.projectWorkPath, self.imageFileName = os.path.split(filePath)
         else:
             image = NArray2QImage(image)
-            self.initUi()
+            # self.initUi()
         self.originImage = image
         self.originView.setImage(self.originImage)
         self.__updateActionsStatus()
@@ -396,6 +396,7 @@ class MainWindow(QMainWindow):
 
     def __imageRegistration(self):
         self.imageRegWidget = ImageRegWidget()
+        self.imageRegWidget.loadDamageImage(QImage2NArray(self.originImage))
         self.imageRegWidget.finish.connect(self.__openImage)
         self.imageRegWidget.show()
         self.__updateActionsStatus()
