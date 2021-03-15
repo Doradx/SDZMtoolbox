@@ -176,7 +176,7 @@ class ImageRegWidget(QWidget):
         self.alignedImage = alignImage
         self.resultCanvas.imshow(self.preImage, 'Image of Undamaged Specimen', '221')
         self.resultCanvas.imshow(self.damageImage, 'Image of Damage Speciimen', '222')
-        self.resultCanvas.imshow(self.alignedImage, 'Aligned Image of Damaged Specimen', '223')
+        self.resultCanvas.imshow(self.alignedImage, 'Aligned Image of Undamaged Specimen', '223')
         self.tabWidget.setCurrentWidget(self.resultCanvas)
         self.__updateActionsStatus()
 
