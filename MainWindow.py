@@ -351,7 +351,7 @@ class MainWindow(QMainWindow):
         try:
             with open(filePath, mode='wb') as f:
                 pickle.dump(project, f, pickle.HIGHEST_PROTOCOL)
-                QMessageBox.information(self, 'Success', 'Project file has been created successfully.')
+                QMessageBox.information(self, 'Success', 'Project file has been saved successfully.')
             self.__updateActionsStatus()
         except Exception as e:
             QMessageBox.warning(self, 'Error', 'Failed to write project file. %s' % e)
@@ -426,10 +426,6 @@ class MainWindow(QMainWindow):
     def __analysisRun(self):
         if not hasattr(self, 'AT'):
             return
-        grayImage = QImage2GrayNArray(self.originView.getImage())
-        self.labelView.setCropPolygon(self.originView.getCropPolygon())
-        self.AT.setParameters(grayImage, self.originView.getCropPolygon(), self.originView.getROIsPolygon())
-        self.processBar.setVisible(True)
         progress = QProgressDialog(self)
         progress.setWindowTitle("Analyzing")
         progress.setLabelText("Analyzing...")
@@ -438,11 +434,19 @@ class MainWindow(QMainWindow):
         progress.setWindowModality(Qt.WindowModal)
         progress.show()
         self.processDialog = progress
+        self.processDialog.setMaximum(100)
+        self.processDialog.setValue(1)
+        self.processBar.setMaximum(100)
+        self.__updateProcessBarValue(1)
 
+        grayImage = QImage2GrayNArray(self.originView.getImage())
+        self.labelView.setCropPolygon(self.originView.getCropPolygon())
+
+        self.AT.setParameters(grayImage, self.originView.getCropPolygon(), self.originView.getROIsPolygon())
         self.AT.process.connect(self.__updateProcessBarValue)
         self.AT.process.connect(self.processDialog.setValue)
         self.AT.finish.connect(self.__analysisFinished)
-        self.AT.run()
+        self.AT.start()
         self.__updateActionsStatus()
 
     def __analysisFinished(self, binaryImage):

@@ -251,7 +251,7 @@ class PolygonView(View):
             if not ok:
                 return
             if not (inputLineLength and drawnScaleLine.length()):
-                QMessageBox.warning('Length of line must be positive number.')
+                QMessageBox.warning(self, 'Length of line must be positive number.')
                 return
             newScale = inputLineLength / drawnScaleLine.length()
             if not self.realScale:
@@ -486,7 +486,7 @@ class ColorCircle(QWidget):
     def getColorByAngleAndRP(self, angle, radiusPercentage):
         color = QColor(255, 255, 255, 0)
         angle = np.mod(angle + 2 * np.pi, 2 * np.pi)
-        h = angle / (2. * np.pi)
+        h = angle / (np.pi) % 1
         v = radiusPercentage
         s = 1.0
         if v <= 1.0:
