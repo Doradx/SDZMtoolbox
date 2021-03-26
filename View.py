@@ -266,11 +266,11 @@ class PolygonView(View):
             for point in self.pointsCache:
                 polygon.append(point)
             # 判断 polygon 类型
-            self.PolygonDrawFinishedSignal.emit(self.DrawType, polygon)
             if self.DrawType == DrawType.CROPPOLYGON:
                 self.setCropPolygon(polygon)
             else:
                 self.addRoiPolygon(polygon)
+            self.PolygonDrawFinishedSignal.emit(self.DrawType, polygon)
 
         self.pointsCache = []
         self.setCursor(Qt.ArrowCursor)

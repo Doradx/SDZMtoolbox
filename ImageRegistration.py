@@ -297,18 +297,20 @@ class ImageRegThread(QThread):
         if len(matches) > MIN_MATCH_COUNT:
             dst_pts = np.float32([kpRef[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
             src_pts = np.float32([kp[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
-            M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+            # M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+            # M, mask = cv2.estimateRigidTransform(src_pts, dst_pts, False)
+            M, mask = cv2.estimateAffine2D(src_pts, dst_pts, cv2.RANSAC)
             matchesMask = mask.ravel().tolist()
         else:
             self.error.emit("Not enough matches are found - {}/{}".format(len(matches), MIN_MATCH_COUNT))
-            matchesMask = None
             return
         draw_params = dict(matchColor=(0, 255, 0),  # draw matches in green color
                            singlePointColor=None,
                            matchesMask=matchesMask,  # draw only inliers
                            flags=2)
         matchesImage = cv2.drawMatches(self.imageRef, kpRef, self.image, kp, matches, None, **draw_params)
-        imageWarped = cv2.warpPerspective(self.image, M, (self.imageRef.shape[1], self.imageRef.shape[0]))
+        # imageWarped = cv2.warpPerspective(self.image, M, (self.imageRef.shape[1], self.imageRef.shape[0]))
+        imageWarped = cv2.warpAffine(self.image, M, (self.imageRef.shape[1], self.imageRef.shape[0]))
         self.finish.emit(imageWarped, matchesImage)
 
 
