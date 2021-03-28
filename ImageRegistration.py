@@ -19,6 +19,7 @@ from matplotlib.figure import Figure
 from skimage import io, color
 import numpy as np
 from ImageTool import *
+import cv2 as cv2
 
 
 class ImageRegWidget(QWidget):
@@ -192,6 +193,10 @@ class ImageRegWidget(QWidget):
         damageImage = NAImage2GrayByChannel(self.damageImage, channel)
         alignedImage = NAImage2GrayByChannel(self.alignedImage, channel)
         # generate the sub image
+        alignedImage = alignedImage - np.mean(alignedImage)
+        damageImage = damageImage - np.mean(damageImage)
+        alignedImage[alignedImage < 0] = 0
+        damageImage[damageImage < 0] = 0
         subImage = alignedImage.astype(np.float) - damageImage.astype(np.float)
         if cType == 'Pre-Damage':
             subImage[subImage < 0] = 0
@@ -199,7 +204,11 @@ class ImageRegWidget(QWidget):
             subImage[subImage > 0] = 0
         # else:
         subImage = np.abs(subImage)
+        subImage = np.power(subImage, 2) / 40
+        subImage[subImage > 255] = 255
+        self.subImage = imAdjust(subImage, 0, 1, 1.2)
         self.subImage = subImage.astype(np.uint8)
+        self.subImage = cv2.equalizeHist(self.subImage)
         self.resultCanvas.imshow(self.subImage, 'Sub Image', '224', 'gray')
         self.__updateActionsStatus()
 
@@ -274,7 +283,6 @@ class ImageRegThread(QThread):
         self.maxFeatures = maxFeatures
 
     def run(self):
-        import cv2 as cv2
         self.algorithm = self.algorithm.upper()
         if self.algorithm not in ['ORB', 'SIFT']:
             self.error.emit('The algorithm not exist.')

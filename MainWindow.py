@@ -53,6 +53,7 @@ class MainWindow(QMainWindow):
         # File
         self.actionOpenImage = QAction(QIcon('res/icons/load-image.png'), 'Open Image', self)
         self.actionOpenImage.setShortcut(QKeySequence.Open)
+        self.actionReplaceImage = QAction(QIcon('res/icons/load-image.png'), 'Replace Image', self)
         self.actionOpenProject = QAction(QIcon('res/icons/folder-open.png'), 'Open Project', self)
         self.actionSaveProject = QAction(QIcon('res/icons/save.png'), 'Save Project', self)
         self.actionSaveProject.setShortcut(QKeySequence.Save)
@@ -112,6 +113,9 @@ class MainWindow(QMainWindow):
         self.actionExportImageWithShearDamageZones = QAction(QIcon('res/icons/export-label-image.png'),
                                                              'Export Image With Shear Damage Zones',
                                                              self)
+        self.actionExportImageWithShearDamageZonesAsBinaryImage = QAction(QIcon('res/icons/export-label-image.png'),
+                                                                          'Export Image With Shear Damage Zones as Binary Image',
+                                                                          self)
         self.actionDamageZonesTable = QAction(QIcon('res/icons/table.png'), 'Table for Damage Zones', self)
         # about
         self.actionTutorials = QAction(QIcon('res/icons/tutorials.png'), 'Tutorials', self)
@@ -120,6 +124,7 @@ class MainWindow(QMainWindow):
 
         # connect action
         self.actionOpenImage.triggered.connect(self.__openImage)
+        self.actionReplaceImage.triggered.connect(self.__replaceImage)
         self.actionOpenProject.triggered.connect(self.__openProject)
         self.actionSaveProject.triggered.connect(self.__saveProject)
         self.actionSaveProjectAs.triggered.connect(self.__saveProjectAs)
@@ -142,6 +147,8 @@ class MainWindow(QMainWindow):
         self.actionFilterSmallHoles.triggered.connect(self.labelView.filterSmallHoles)
         self.actionExportImageWithROIs.triggered.connect(self.__exportImageWithROIs)
         self.actionExportImageWithShearDamageZones.triggered.connect(self.__exportImageWithDamageZones)
+        self.actionExportImageWithShearDamageZonesAsBinaryImage.triggered.connect(
+            self.__exportImageWithDamageZonesAsBinaryImage)
         self.actionDamageZonesTable.triggered.connect(self.__damageZonesTable)  # 需要补充
         # # help
         self.actionTutorials.triggered.connect(self.__tutorials)
@@ -158,6 +165,7 @@ class MainWindow(QMainWindow):
         menuFile = menuBar.addMenu('File')
         menuFile.addActions([
             self.actionOpenImage,
+            self.actionReplaceImage,
             self.actionImageRegistration,
             menuFile.addSeparator(),
             self.actionOpenProject,
@@ -203,6 +211,7 @@ class MainWindow(QMainWindow):
             postprocessingMenu.addSeparator(),
             self.actionExportImageWithROIs,
             self.actionExportImageWithShearDamageZones,
+            self.actionExportImageWithShearDamageZonesAsBinaryImage,
             postprocessingMenu.addSeparator(),
             self.actionDamageZonesTable
         ])
@@ -284,7 +293,7 @@ class MainWindow(QMainWindow):
 
     # File
 
-    def __openImage(self, image=np.array([])):
+    def __openImage(self, image=np.array([]), initUi=True):
         if type(image) != np.ndarray:
             filePath, fileType = QFileDialog.getOpenFileName(self, caption='Choose the image',
                                                              directory=self.projectWorkPath,
@@ -293,7 +302,8 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, 'No File Selected', 'No image file is selected.')
                 return
             image = QImage(filePath)
-            self.initUi()
+            if initUi:
+                self.initUi()
             self.projectWorkPath, self.imageFileName = os.path.split(filePath)
         else:
             image = NArray2QImage(image)
@@ -301,6 +311,9 @@ class MainWindow(QMainWindow):
         self.originImage = image
         self.originView.setImage(self.originImage)
         self.__updateActionsStatus()
+
+    def __replaceImage(self):
+        self.__openImage(image=None, initUi=False)
 
     def __openProject(self):
         filePath, fileType = QFileDialog.getOpenFileName(self, 'Choose the project file',
@@ -335,6 +348,7 @@ class MainWindow(QMainWindow):
     def __saveProject(self):
         if not self.projectFileName:
             self.__saveProjectAs()
+            return
         ROIs = []
         for roi in self.originView.getROIsPolygon():
             ROIs.append(QPolygonF2list(roi))
@@ -398,9 +412,12 @@ class MainWindow(QMainWindow):
         self.imageRegWidget = ImageRegWidget()
         if self.originImage is not None:
             self.imageRegWidget.loadDamageImage(QImage2NArray(self.originImage).transpose((1, 0, 2)))
-        self.imageRegWidget.finish.connect(self.__openImage)
+        self.imageRegWidget.finish.connect(self.__updateImage)
         self.imageRegWidget.show()
         self.__updateActionsStatus()
+
+    def __updateImage(self, image):
+        self.__openImage(image, initUi=False)
 
     # analysis
     def __analysisOtsuBasedOnROIs(self):
@@ -510,6 +527,18 @@ class MainWindow(QMainWindow):
         image.save(filePath)
         self.__updateActionsStatus()
 
+    def __exportImageWithDamageZonesAsBinaryImage(self):
+        filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save image with shear damage zones',
+                                                         os.path.join(self.projectWorkPath, 'ImageWithZones-%s.png' % (
+                                                             datetime.datetime.now().strftime('%Y%m%d%H%M%S'))),
+                                                         ' png (*.png);;')
+        if not filePath:
+            QMessageBox.warning(self, 'No Path Selected', 'No Path is selected.')
+            return
+        image = self.labelView.getBinaryImage()
+        image.save(filePath)
+        self.__updateActionsStatus()
+
     def __damageZonesTable(self):
         self.resultTable = LabelDataTable()
         self.resultTable.setData(self.labelView.binaryImage, self.originView.realScale, self.originView.cropPolygon)
@@ -539,6 +568,7 @@ class MainWindow(QMainWindow):
     def __updateActionsStatus(self) -> None:
         image = self.originView.getImage()
         hasOriginImage = not (image is None or image is False)
+        self.actionReplaceImage.setEnabled(hasOriginImage)
         self.actionSaveProject.setEnabled(hasOriginImage)
         self.actionSaveProjectAs.setEnabled(hasOriginImage)
         self.actionCloseProject.setEnabled(hasOriginImage)
@@ -554,6 +584,7 @@ class MainWindow(QMainWindow):
         self.actionFilterSmallHoles.setEnabled(len(self.labelView.binaryImage.shape))
         self.actionExportImageWithROIs.setEnabled(hasOriginImage)
         self.actionExportImageWithShearDamageZones.setEnabled(len(self.labelView.binaryImage.shape))
+        self.actionExportImageWithShearDamageZonesAsBinaryImage.setEnabled(len(self.labelView.binaryImage.shape))
         self.actionDamageZonesTable.setEnabled(len(self.labelView.binaryImage.shape))
         pass
 

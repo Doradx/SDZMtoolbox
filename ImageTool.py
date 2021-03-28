@@ -138,6 +138,21 @@ def list2QPolygonF(data):
     return polygon
 
 
+def imAdjust(image, low_in=0.01, high_in=0.99, gamma=1):
+    assert (type(image) == np.ndarray)
+    image = image.astype(np.double)
+    imageArr = image.flatten()
+    imageArr = np.sort(imageArr)
+    lowT = imageArr[int(low_in * len(imageArr))]
+    highT = imageArr[int((1 - high_in) * len(imageArr))]
+    imageNew = (image - lowT) / (highT - lowT)
+    imageNew[imageNew > 1] = 1
+    imageNew[imageNew < 0] = 0
+    imageNew = np.power(imageNew, gamma)
+    imageNew = imageNew * 255
+    return imageNew.astype(np.uint8)
+
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 

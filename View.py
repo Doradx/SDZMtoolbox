@@ -411,6 +411,9 @@ class LabelImageView(View):
                                                          connectivity=2)
         self.__updateDrawnItems()
 
+    def getBinaryImage(self):
+        return NArray2QImage(self.binaryImage * 255)
+
     def __updateDrawnItems(self):
         if np.sum(self.binaryImage) <= 0:
             return
