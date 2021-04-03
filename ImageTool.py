@@ -153,6 +153,13 @@ def imAdjust(image, low_in=0.01, high_in=0.99, gamma=1):
     return imageNew.astype(np.uint8)
 
 
+def medianFilter(image, size=4):
+    assert (type(image) == np.ndarray)
+    from skimage.filters.rank import median
+    from skimage.morphology import disk
+    return median(image, disk(size))
+
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 

@@ -53,8 +53,10 @@ class ImageRegWidget(QWidget):
             'ORB',
             'SIFT',
         ])
-        self.lineEditMaxFeaturePoints = QLineEdit('500')
-        self.lineEditMaxFeaturePoints.setValidator(QIntValidator(20, 5000))
+        self.diskRadiusOfMedianFilterBox = QSpinBox(self)
+        self.diskRadiusOfMedianFilterBox.setRange(3, 20)
+        self.diskRadiusOfMedianFilterBox.setValue(3)
+        self.diskRadiusOfMedianFilterBox.setSingleStep(2)
         self.buttonAnalysis = QPushButton('Analysis')
         self.buttonAnalysis.clicked.connect(self.__analysis)
 
@@ -64,8 +66,8 @@ class ImageRegWidget(QWidget):
         vBox.addWidget(self.buttonLoadDamageImage)
         vBox.addWidget(self.buttonLoadPreImage)
         formBox = QFormLayout()
-        formBox.addRow('Feature', self.selectFeatureBox)
-        formBox.addRow('MaxFeatures', self.lineEditMaxFeaturePoints)
+        formBox.addRow('Feature Detection Algorithm', self.selectFeatureBox)
+        formBox.addRow('Disk Radius of Median Filter', self.diskRadiusOfMedianFilterBox)
         vBox.addLayout(formBox)
         vBox.addWidget(self.buttonAnalysis)
         groupBoxImageReg.setLayout(vBox)
@@ -151,7 +153,7 @@ class ImageRegWidget(QWidget):
         IT.setParameters(self.preImage, self.damageImage, self.selectFeatureBox.currentText())
         IT.error.connect(self.__errorHandle)
         IT.finish.connect(self.__analysisFinished)
-        IT.run()
+        IT.start()
         self.__updateActionsStatus()
 
     def __setPreImage(self, image):
@@ -192,6 +194,8 @@ class ImageRegWidget(QWidget):
             return
         damageImage = NAImage2GrayByChannel(self.damageImage, channel)
         alignedImage = NAImage2GrayByChannel(self.alignedImage, channel)
+        alignedImage = medianFilter(alignedImage.astype(np.uint8), self.diskRadiusOfMedianFilterBox.value())
+        alignedImage = alignedImage.astype(np.float32)
         # generate the sub image
         alignedImage = alignedImage - np.mean(alignedImage)
         damageImage = damageImage - np.mean(damageImage)
@@ -206,7 +210,7 @@ class ImageRegWidget(QWidget):
         subImage = np.abs(subImage)
         subImage = np.power(subImage, 2) / 40
         subImage[subImage > 255] = 255
-        self.subImage = imAdjust(subImage, 0, 1, 1.2)
+        # self.subImage = imAdjust(subImage, 0, 1, 1)
         self.subImage = subImage.astype(np.uint8)
         self.subImage = cv2.equalizeHist(self.subImage)
         self.resultCanvas.imshow(self.subImage, 'Sub Image', '224', 'gray')

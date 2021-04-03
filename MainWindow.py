@@ -84,6 +84,8 @@ class MainWindow(QMainWindow):
         self.actionGroupChannel.addAction(self.actionChannelGreen)
         self.actionGroupChannel.addAction(self.actionChannelBlue)
 
+        self.actionMedianFilter = QAction(QIcon('res/icons/median-filter.png'), 'Median Filter', self)
+
         self.actionSetScale = QAction(QIcon('res/icons/ruler.png'), 'Set Scale', self)
         self.actionCropImage = QAction(QIcon('res/icons/crop.png'), 'Crop Image', self)
         self.actionCreateNewROI = QAction(QIcon('res/icons/polygon.png'), 'Create New ROI', self)
@@ -133,6 +135,7 @@ class MainWindow(QMainWindow):
         # # pre
         self.actionGroupChannel.triggered.connect(self.__channelChanged)
         self.actionImageRegistration.triggered.connect(self.__imageRegistration)  # 需要补充
+        self.actionMedianFilter.triggered.connect(self.__medianFilter)
         self.actionSetScale.triggered.connect(self.originView.setScale)
         self.actionCropImage.triggered.connect(self.originView.startDrawCropPolygon)
         self.actionCreateNewROI.triggered.connect(self.originView.startDrawROIPolygon)
@@ -187,6 +190,7 @@ class MainWindow(QMainWindow):
         ])
         menuPretreatment.addActions([
             menuPretreatment.addSeparator(),
+            self.actionMedianFilter,
             self.actionSetScale,
             self.actionCropImage,
             menuPretreatment.addSeparator(),
@@ -416,6 +420,17 @@ class MainWindow(QMainWindow):
         self.imageRegWidget.show()
         self.__updateActionsStatus()
 
+    def __medianFilter(self):
+        # ask to imput the size of disk.
+        diskRadius, ok = QInputDialog.getInt(self, 'Input the radius of disk for median filter.', 'Radius(mm)', 3,
+                                             3, 100, 2)
+        if not ok:
+            return
+        grayImage = QImage2GrayNArray(self.originView.getImage())
+        self.originImage = NArray2QImage(medianFilter(grayImage, diskRadius))
+        self.originView.setImage(self.originImage)
+        self.__updateActionsStatus()
+
     def __updateImage(self, image):
         self.__openImage(image, initUi=False)
 
@@ -517,7 +532,7 @@ class MainWindow(QMainWindow):
 
     def __exportImageWithDamageZones(self):
         filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save image with shear damage zones',
-                                                         os.path.join(self.projectWorkPath, 'ImageWithZones-%s.png' % (
+                                                         os.path.join(self.projectWorkPath, 'ColoredDamageZones-%s.png' % (
                                                              datetime.datetime.now().strftime('%Y%m%d%H%M%S'))),
                                                          ' png (*.png);;')
         if not filePath:
@@ -529,7 +544,7 @@ class MainWindow(QMainWindow):
 
     def __exportImageWithDamageZonesAsBinaryImage(self):
         filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save image with shear damage zones',
-                                                         os.path.join(self.projectWorkPath, 'ImageWithZones-%s.png' % (
+                                                         os.path.join(self.projectWorkPath, 'BinaryDamageZones-%s.png' % (
                                                              datetime.datetime.now().strftime('%Y%m%d%H%M%S'))),
                                                          ' png (*.png);;')
         if not filePath:
@@ -572,6 +587,7 @@ class MainWindow(QMainWindow):
         self.actionSaveProject.setEnabled(hasOriginImage)
         self.actionSaveProjectAs.setEnabled(hasOriginImage)
         self.actionCloseProject.setEnabled(hasOriginImage)
+        self.actionMedianFilter.setEnabled(hasOriginImage)
         self.actionSetScale.setEnabled(hasOriginImage)
         self.actionCropImage.setEnabled(hasOriginImage)
         self.actionCreateNewROI.setEnabled(hasOriginImage)
