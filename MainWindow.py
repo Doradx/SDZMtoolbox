@@ -12,7 +12,8 @@ import datetime
 from AnalysisThread import *
 from ImageTool import *
 from LabelImageDataTable import LabelDataTable
-import os, pickle
+import os
+import pickle5 as pickle
 from ImageRegistration import ImageRegWidget
 
 
@@ -532,8 +533,10 @@ class MainWindow(QMainWindow):
 
     def __exportImageWithDamageZones(self):
         filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save image with shear damage zones',
-                                                         os.path.join(self.projectWorkPath, 'ColoredDamageZones-%s.png' % (
-                                                             datetime.datetime.now().strftime('%Y%m%d%H%M%S'))),
+                                                         os.path.join(self.projectWorkPath,
+                                                                      'ColoredDamageZones-%s.png' % (
+                                                                          datetime.datetime.now().strftime(
+                                                                              '%Y%m%d%H%M%S'))),
                                                          ' png (*.png);;')
         if not filePath:
             QMessageBox.warning(self, 'No Path Selected', 'No Path is selected.')
@@ -544,8 +547,10 @@ class MainWindow(QMainWindow):
 
     def __exportImageWithDamageZonesAsBinaryImage(self):
         filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save image with shear damage zones',
-                                                         os.path.join(self.projectWorkPath, 'BinaryDamageZones-%s.png' % (
-                                                             datetime.datetime.now().strftime('%Y%m%d%H%M%S'))),
+                                                         os.path.join(self.projectWorkPath,
+                                                                      'BinaryDamageZones-%s.png' % (
+                                                                          datetime.datetime.now().strftime(
+                                                                              '%Y%m%d%H%M%S'))),
                                                          ' png (*.png);;')
         if not filePath:
             QMessageBox.warning(self, 'No Path Selected', 'No Path is selected.')

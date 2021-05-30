@@ -88,10 +88,14 @@ class ImageRegWidget(QWidget):
             'Blue'
         ])
         self.channelType.currentTextChanged.connect(self.__updateSubImage)
-        self.buttonLoadImageToSDZM = QPushButton('Load to SDZM toolbox')
+
+        # export button
+        self.buttonLoadImageToSDZM = QPushButton('Load subimage to SDZM toolbox')
         self.buttonLoadImageToSDZM.clicked.connect(self.__exportToDZMTtoolbox)
-        self.buttonExportAsPng = QPushButton('Export as *.png')
+        self.buttonExportAsPng = QPushButton('Export subimage as *.png')
         self.buttonExportAsPng.clicked.connect(self.__exportAsPng)
+        self.buttonExportAlignedImageAspng = QPushButton('Export aligned image as *.png')
+        self.buttonExportAlignedImageAspng.clicked.connect(self.__exportAlignedImage)
         exportFormBox = QFormLayout()
         exportFormBox.addRow('Sub Type', self.selectSubType)
         exportFormBox.addRow('Channel', self.channelType)
@@ -99,6 +103,7 @@ class ImageRegWidget(QWidget):
         exportVBox.addLayout(exportFormBox)
         exportVBox.addWidget(self.buttonExportAsPng)
         exportVBox.addWidget(self.buttonLoadImageToSDZM)
+        exportVBox.addWidget(self.buttonExportAlignedImageAspng)
         groupBoxExport.setLayout(exportVBox)
 
         self.leftLayout.addWidget(groupBoxImageReg)
@@ -120,6 +125,7 @@ class ImageRegWidget(QWidget):
         self.damageImage = None
         self.alignedImage = None
         self.subImage = None
+        self.cropPolygon = None  # polygon as list type
         self.__updateActionsStatus()
 
     def loadPreImage(self, image=False):
@@ -154,6 +160,7 @@ class ImageRegWidget(QWidget):
         IT.error.connect(self.__errorHandle)
         IT.finish.connect(self.__analysisFinished)
         IT.start()
+        self.IT = IT
         self.__updateActionsStatus()
 
     def __setPreImage(self, image):
@@ -201,6 +208,7 @@ class ImageRegWidget(QWidget):
         damageImage = damageImage - np.mean(damageImage)
         alignedImage[alignedImage < 0] = 0
         damageImage[damageImage < 0] = 0
+        # align - damage
         subImage = alignedImage.astype(np.float) - damageImage.astype(np.float)
         if cType == 'Pre-Damage':
             subImage[subImage < 0] = 0
@@ -214,6 +222,18 @@ class ImageRegWidget(QWidget):
         self.subImage = subImage.astype(np.uint8)
         self.subImage = cv2.equalizeHist(self.subImage)
         self.resultCanvas.imshow(self.subImage, 'Sub Image', '224', 'gray')
+        self.__updateActionsStatus()
+
+    def __exportAlignedImage(self):
+        # select path
+        filePath, fileType = QFileDialog.getSaveFileName(self, 'Choose the path to save the image',
+                                                         os.path.join(self.projectWorkPath, 'ImageOutput-%s.png' % (
+                                                             datetime.datetime.now().strftime('%Y%m%d%H%M%S'))),
+                                                         ' png (*.png);;')
+        if not filePath:
+            QMessageBox.warning(self, 'No Path Selected', 'No Path is selected.')
+            return
+        io.imsave(filePath, self.alignedImage)
         self.__updateActionsStatus()
 
     def __exportAsPng(self):
@@ -247,6 +267,7 @@ class ImageRegWidget(QWidget):
         self.buttonAnalysis.setEnabled(type(self.preImage) == np.ndarray and type(self.damageImage) == np.ndarray)
         self.buttonLoadImageToSDZM.setEnabled(type(self.subImage) == np.ndarray)
         self.buttonExportAsPng.setEnabled(type(self.subImage) == np.ndarray)
+        self.buttonExportAlignedImageAspng.setEnabled(type(self.subImage) == np.ndarray)
 
 
 # matplotlib 绘图
@@ -296,6 +317,7 @@ class ImageRegThread(QThread):
             descExtractor = cv2.SIFT_create()
         elif self.algorithm == 'ORB':
             descExtractor = cv2.ORB_create(self.maxFeatures)
+        # check the cropPolygon and
         # find keypoints with detector
         kpRef, desRef = descExtractor.detectAndCompute(self.imageRef, None)
         kp, des = descExtractor.detectAndCompute(self.image, None)
