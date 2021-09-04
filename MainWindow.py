@@ -60,6 +60,7 @@ class MainWindow(QMainWindow):
         self.actionSaveProject.setShortcut(QKeySequence.Save)
         self.actionSaveProjectAs = QAction(QIcon('res/icons/save.png'), 'Save Project As', self)
         self.actionSaveProjectAs.setShortcut(QKeySequence.SaveAs)
+        self.actionImportProject = QAction(QIcon('res/icons/import.png'), 'Import Project', self)
         self.actionCloseProject = QAction(QIcon('res/icons/close.png'), 'Close Project', self)
         self.actionCloseProject.setShortcut(QKeySequence.Close)
         self.actionExit = QAction(QIcon('res/icons/exit.png'), 'Exit', self)
@@ -131,6 +132,7 @@ class MainWindow(QMainWindow):
         self.actionOpenProject.triggered.connect(self.__openProject)
         self.actionSaveProject.triggered.connect(self.__saveProject)
         self.actionSaveProjectAs.triggered.connect(self.__saveProjectAs)
+        self.actionImportProject.triggered.connect(self.__importOldProject)
         self.actionCloseProject.triggered.connect(self.__closeProject)
         self.actionExit.triggered.connect(self.close)
         # # pre
@@ -175,6 +177,7 @@ class MainWindow(QMainWindow):
             self.actionOpenProject,
             self.actionSaveProject,
             self.actionSaveProjectAs,
+            self.actionImportProject,
             self.actionCloseProject,
             menuFile.addSeparator(),
             self.actionExit
@@ -344,6 +347,65 @@ class MainWindow(QMainWindow):
             if project['cropPolygon']:
                 self.originView.setCropPolygon(list2QPolygonF(project['cropPolygon']))
                 self.labelView.setCropPolygon(self.originView.cropPolygon)
+            self.__updateActionsStatus()
+        except Exception as e:
+            QMessageBox.warning(self, 'Illegal Project Document',
+                                'Illegal project document, please select a legal one: %s' % e)
+            return
+
+    def __importOldProject(self):
+        filePath, fileType = QFileDialog.getOpenFileName(self, 'Choose the project file',
+                                                         directory=self.projectWorkPath,
+                                                         filter=' project (*.pro);')
+        if not filePath:
+            QMessageBox.warning(self, 'No Project File Selected', 'No project file is selected.')
+            return
+        self.initUi()
+        self.projectWorkPath, self.projectFileName = os.path.split(filePath)
+
+        import scipy.sparse as sp
+        import json
+        def JsonDecoding(project):
+            # crop_polygon, QPolygonF
+            T = QPolygonF()
+            if project['crop_polygon']:
+                for p in project['crop_polygon']:
+                    T.append(QPointF(p[0], p[1]))
+            project['crop_polygon'] = T
+            # polygon, QPolygon
+            if project['polygon']:
+                for polygon in project['polygon']:
+                    T = QPolygonF()
+                    for point in polygon['geo']:
+                        T.append(QPointF(point[0], point[1]))
+                    polygon['geo'] = T
+            # label_image
+            limage = project['label_image']
+            project['offset'] = QPointF(project['offset'][0], project['offset'][1])
+            if len(limage['data']):
+                project['label_image'] = sp.csr_matrix((limage['data'], limage['indices'], limage['indptr']),
+                                                       dtype=int).toarray()
+            else:
+                project['label_image'] = np.array([])
+            return project
+
+        try:
+            with open(filePath, mode='rb') as f:
+                project = json.load(f)
+            # decode
+            project = JsonDecoding(project)
+            self.originImage = QImage(project['base_image'])
+            self.__setColorChannelByName()
+            if project['crop_polygon']:
+                self.originView.setCropPolygon(project['crop_polygon'])
+                self.labelView.setCropPolygon(project['crop_polygon'])
+            for roi in project['polygon']:
+                self.originView.addRoiPolygon(roi['geo'])
+            if 'real_scale' in project:
+                self.originView.realScale = project['real_scale']
+                self.labelView.realScale = project['real_scale']
+            if project['label_image'].max() > 0:
+                self.labelView.setImage(project['label_image'].T > 0)
             self.__updateActionsStatus()
         except Exception as e:
             QMessageBox.warning(self, 'Illegal Project Document',
@@ -624,7 +686,6 @@ class MainWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
-
 
 import sys
 
