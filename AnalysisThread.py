@@ -35,7 +35,8 @@ class AnalysisThread(QThread):
             self.edgeMask = QPolygon2Mask(self.grayImage.shape[0], self.grayImage.shape[1], cropPolygon)
         self.ROIsMaskList = []
         for roi in ROIs:
-            self.ROIsMaskList.append(QPolygon2Mask(self.grayImage.shape[0], self.grayImage.shape[1], roi))
+            self.ROIsMaskList.append(
+                np.logical_and(QPolygon2Mask(self.grayImage.shape[0], self.grayImage.shape[1], roi), self.edgeMask))
 
     def run(self):
         if type(self.grayImage) == np.array:

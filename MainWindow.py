@@ -587,7 +587,7 @@ class MainWindow(QMainWindow):
             plt.axis('equal')
             plt.axis('off')
             plt.savefig(filePath, format='eps', transparent=True)
-            pass
+            plt.close()
         else:
             image = self.originView.getRenderedImageFromScene()
             image.save(filePath)
