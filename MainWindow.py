@@ -9,8 +9,8 @@ import datetime
 import os
 
 import pickle5 as pickle
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon, QKeySequence, QCloseEvent
+from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtGui import QIcon, QKeySequence, QCloseEvent, QDesktopServices
 from PyQt5.QtWidgets import QMainWindow, QAction, QActionGroup, QLabel, QProgressBar, QSplitter, QFileDialog, \
     QMessageBox, QInputDialog, QProgressDialog, QApplication
 
