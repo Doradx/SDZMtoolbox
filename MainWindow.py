@@ -5,16 +5,19 @@
 # @Author  : Dorad, cug.xia@gmail.com
 # @Blog    ：https://blog.cuger.cn
 
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
 import datetime
+import os
+
+import pickle5 as pickle
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon, QKeySequence, QCloseEvent
+from PyQt5.QtWidgets import QMainWindow, QAction, QActionGroup, QLabel, QProgressBar, QSplitter, QFileDialog, \
+    QMessageBox, QInputDialog, QProgressDialog, QApplication
+
 from AnalysisThread import *
+from ImageRegistration import ImageRegWidget
 from ImageTool import *
 from LabelImageDataTable import LabelDataTable
-import os
-import pickle5 as pickle
-from ImageRegistration import ImageRegWidget
 
 
 class MainWindow(QMainWindow):

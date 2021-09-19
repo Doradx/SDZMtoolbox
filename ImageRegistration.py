@@ -5,19 +5,19 @@
 # @Author  : Dorad, cug.xia@gmail.com
 # @Blog    ：https://blog.cuger.cn
 
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-import datetime, os
+import datetime
+import os
 
 import matplotlib
+from PyQt5.QtCore import pyqtSignal, QThread
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QPushButton, QComboBox, QGroupBox, QSpinBox, QSizePolicy, \
+    QFormLayout, QHBoxLayout, QFileDialog, QMessageBox, QApplication
 
 matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
-from skimage import io, color
-import numpy as np
+from skimage import io
 from ImageTool import *
 import cv2 as cv2
 

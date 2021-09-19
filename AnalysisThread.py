@@ -5,9 +5,9 @@
 # @Author  : Dorad, cug.xia@gmail.com
 # @Blog    ：https://blog.cuger.cn
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-import numpy as np
+
+from PyQt5.QtCore import QThread, pyqtSignal
+
 from ImageTool import *
 
 
@@ -92,7 +92,6 @@ class RissAnalysisThread(ROIsOTSUAnalysisThread):
         :param mask:
         :return:
         '''
-        from skimage import filters
         masked = np.ma.masked_array(image, mask == 0)
         # calculate the mean and std
         mu = np.mean(masked.compressed())

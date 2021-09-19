@@ -11,9 +11,9 @@ this file provide some function for image transform
 '''
 
 import numpy as np
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from skimage import color, measure, morphology
+from PyQt5.QtCore import QPointF
+from PyQt5.QtGui import QImage, QPolygonF, QPixmap
+from skimage import color
 
 
 def QImageToGrayByChannel(qimage: QImage, channel, isNdarray=False):

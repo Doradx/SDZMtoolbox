@@ -12,12 +12,12 @@
 
 import csv
 
+import numpy as np
 from PyQt5.QtCore import QPointF, Qt, pyqtSignal, QRectF
-from PyQt5.QtGui import QIcon, QColor, QMouseEvent, QPolygonF
+from PyQt5.QtGui import QIcon, QColor, QPolygonF
 from PyQt5.QtWidgets import QWidget, QToolBar, QAction, QTableWidget, QAbstractItemView, QVBoxLayout, QHBoxLayout, \
     QTableWidgetItem, \
     QFileDialog, QMessageBox, QApplication, QGroupBox, QLabel, QLineEdit, QSpacerItem, QSizePolicy
-import numpy as np
 
 
 class LabelDataTable(QWidget):

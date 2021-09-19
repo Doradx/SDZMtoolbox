@@ -5,11 +5,15 @@
 # @Author  : Dorad, cug.xia@gmail.com
 # @Blog    ：https://blog.cuger.cn
 
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+
 from enum import Enum
-import numpy as np
+
+from PyQt5.QtCore import pyqtSignal, Qt, QRect, QPoint, QRectF, QLineF
+from PyQt5.QtGui import QIcon, QWheelEvent, QPainter, QPainterPath, QMouseEvent, QPen, QColor, QKeyEvent, QPolygon
+from PyQt5.QtWidgets import QGraphicsView, QGraphicsScene, QPushButton, QVBoxLayout, QHBoxLayout, QGraphicsItem, \
+    QInputDialog, QMessageBox, QWidget, QApplication, QSplitter
+from skimage import morphology
+
 from ImageTool import *
 
 
@@ -166,7 +170,6 @@ class PolygonView(View):
         self.realScale = None
 
         # draw type
-        from enum import Enum
         self.DrawType = DrawType.NONE
         self.__updatePen()
 
@@ -398,7 +401,6 @@ class LabelImageView(View):
         if not ok:
             return
         # filter the small blocks
-        from skimage import morphology
         self.binaryImage = morphology.remove_small_objects(self.binaryImage,
                                                            minBlockSizeVlue / self.realScale / self.realScale,
                                                            connectivity=2)
@@ -465,13 +467,6 @@ class LabelImageView(View):
     def clear(self):
         View.clear(self)
         self.initUi()
-
-
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-import sys
-import numpy as np
 
 
 class ColorCircle(QWidget):
