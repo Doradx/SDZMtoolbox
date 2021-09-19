@@ -13,6 +13,7 @@ from ImageTool import *
 
 # 所有 mask, 0 均是被遮住的部分, 不要的
 
+# basic threshold, global OTSU
 class AnalysisThread(QThread):
     '''
     Analysis Thread for global OTSU
@@ -45,7 +46,7 @@ class AnalysisThread(QThread):
         self.process.emit(100)
         self.finish.emit(self.labelImage)
 
-
+# manual, ROIs to Zones
 class ROIsToZonesAnalysisThread(AnalysisThread):
     def __init__(self):
         AnalysisThread.__init__(self)
@@ -57,7 +58,7 @@ class ROIsToZonesAnalysisThread(AnalysisThread):
             bw = np.logical_or(roiMask, bw)
         self.finish.emit(bw)
 
-
+# SDZM, local binarization for each ROIs
 class ROIsOTSUAnalysisThread(AnalysisThread):
     def __init__(self):
         AnalysisThread.__init__(self)
@@ -71,6 +72,7 @@ class ROIsOTSUAnalysisThread(AnalysisThread):
         self.finish.emit(bw)
 
 
+# Riss, the method proposed py Joëlle Riss, https://doi.org/10.1051/mmm:1996153
 class RissAnalysisThread(ROIsOTSUAnalysisThread):
     def __init__(self):
         ROIsOTSUAnalysisThread.__init__(self)
