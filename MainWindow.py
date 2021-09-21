@@ -97,15 +97,15 @@ class MainWindow(QMainWindow):
         self.actionDeleteSelectedROIs = QAction(QIcon('res/icons/delete-rois.png'), 'Delete Selected ROIs', self)
         # analysis
         self.actionAnalysisOtsuBasedOnROIs = QAction(QIcon('res/icons/run.png'),
-                                                     'Analysis - OTSU Threshold Method Based on ROIs',
+                                                     'Analysis - Local OTSU based on ROIs',
                                                      self)
-        self.actionAnalysisROIs = QAction(QIcon('res/icons/run.png'), 'Analysis - ROIs to Label Image',
+        self.actionAnalysisROIs = QAction(QIcon('res/icons/run.png'), 'Analysis - Manual based on ROIs',
                                           self)
         self.actionAnalysisOTSU = QAction(QIcon('res/icons/run.png'),
-                                          'Analysis - Global Threshold Method based on OTSU',
+                                          'Analysis - Global OTSU',
                                           self)
         self.actionAnalysisRiss = QAction(QIcon('res/icons/run.png'),
-                                          'Analysis - Global Theashold Method based on Riss',
+                                          'Analysis - Riss method based on ROIs',
                                           self)
         # post-processing
         self.actionFilterSmallZones = QAction(QIcon('res/icons/filter-small-zones.png'),
