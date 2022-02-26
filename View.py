@@ -352,10 +352,12 @@ class PolygonView(View):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         # 正在绘制 polygon
         if self.isDrawing:
-            if event.key() == Qt.Key_Delete:
+            if event.key() == Qt.Key_Delete or event.key() == Qt.Key_Backspace:
                 self.pointsCache.pop()
             elif event.key() == Qt.Key_Escape:
                 self.__stopDraw(False)
+            elif event.key() == Qt.Key_Enter:
+                self.__stopDraw(True)
         elif (event.key() == Qt.Key_Delete):
             # 删除选中的 ROIPOLYGON
             self.deleteSelectedROIs()

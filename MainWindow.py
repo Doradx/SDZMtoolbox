@@ -63,7 +63,7 @@ class MainWindow(QMainWindow):
         self.actionSaveProject.setShortcut(QKeySequence.Save)
         self.actionSaveProjectAs = QAction(QIcon('res/icons/save.png'), 'Save Project As', self)
         self.actionSaveProjectAs.setShortcut(QKeySequence.SaveAs)
-        self.actionImportProject = QAction(QIcon('res/icons/import.png'), 'Import Project', self)
+        self.actionImportProject = QAction(QIcon('res/icons/import.png'), 'Import Old Version Project', self)
         self.actionCloseProject = QAction(QIcon('res/icons/close.png'), 'Close Project', self)
         self.actionCloseProject.setShortcut(QKeySequence.Close)
         self.actionExit = QAction(QIcon('res/icons/exit.png'), 'Exit', self)
@@ -97,25 +97,25 @@ class MainWindow(QMainWindow):
         self.actionDeleteSelectedROIs = QAction(QIcon('res/icons/delete-rois.png'), 'Delete Selected ROIs', self)
         # analysis
         self.actionAnalysisOtsuBasedOnROIs = QAction(QIcon('res/icons/run.png'),
-                                                     'Analysis - Local OTSU based on ROIs',
+                                                     'Local OTSU method - Local OTSU based on ROIs',
                                                      self)
-        self.actionAnalysisROIs = QAction(QIcon('res/icons/run.png'), 'Analysis - Manual based on ROIs',
+        self.actionAnalysisROIs = QAction(QIcon('res/icons/run.png'), 'Manually method - Convert ROIs to Shear Damage Zones',
                                           self)
         self.actionAnalysisOTSU = QAction(QIcon('res/icons/run.png'),
-                                          'Analysis - Global OTSU',
+                                          'Global OTSU method',
                                           self)
         self.actionAnalysisRiss = QAction(QIcon('res/icons/run.png'),
-                                          'Analysis - Riss method based on ROIs',
+                                          'Riss method - Riss method based on ROIs',
                                           self)
         # post-processing
         self.actionFilterSmallZones = QAction(QIcon('res/icons/filter-small-zones.png'),
                                               'Filter Small Shear Damage Zones',
                                               self)
         self.actionFilterSmallHoles = QAction(QIcon('res/icons/filter-small-holes.png'),
-                                              'Filter Small Holes in Shear Damage Zones',
+                                              'Fill Small Holes in Shear Damage Zones',
                                               self)
         self.actionExportImageWithROIs = QAction(QIcon('res/icons/export-rois.png'),
-                                                 'Export Image With ROIs',
+                                                 'Export Origin Image With ROIs',
                                                  self)
         self.actionExportImageWithShearDamageZones = QAction(QIcon('res/icons/export-label-image.png'),
                                                              'Export Image With Shear Damage Zones',
@@ -144,7 +144,9 @@ class MainWindow(QMainWindow):
         self.actionMedianFilter.triggered.connect(self.__medianFilter)
         self.actionSetScale.triggered.connect(self.originView.setScale)
         self.actionCropImage.triggered.connect(self.originView.startDrawCropPolygon)
+        self.actionCropImage.triggered.connect(self.__mouseDrapNotice)
         self.actionCreateNewROI.triggered.connect(self.originView.startDrawROIPolygon)
+        self.actionCreateNewROI.triggered.connect(self.__mouseDrapNotice)
         self.actionDeleteSelectedROIs.triggered.connect(self.originView.deleteSelectedROIs)
         # # analysis, 全部需要补充
         self.actionAnalysisOtsuBasedOnROIs.triggered.connect(self.__analysisOtsuBasedOnROIs)
@@ -294,6 +296,7 @@ class MainWindow(QMainWindow):
         self.projectFileName = None
         self.imageFileName = None
         self.originImage = None
+        self.__mouseDrapNoticeEnable = True
 
         self.colorChannel = 'RGB'
         self.__setColorChannelByName(self.colorChannel)
@@ -500,6 +503,16 @@ class MainWindow(QMainWindow):
     def __updateImage(self, image):
         self.__openImage(image, initUi=False)
 
+    def __mouseDrapNotice(self):
+        if self.__mouseDrapNoticeEnable:
+            QMessageBox.information(self, 'Operation Notice', '''
+            How to draw the polygon:
+            1. click left mouse button to add point;
+            2. click "DELETE" to remove the last point;
+            3. click right mouse button to finish.
+            ''')
+            self.__mouseDrapNoticeEnable = False
+
     # analysis
     def __analysisOtsuBasedOnROIs(self):
         self.AT = ROIsOTSUAnalysisThread()
@@ -689,6 +702,7 @@ class MainWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
 
 import sys
 
